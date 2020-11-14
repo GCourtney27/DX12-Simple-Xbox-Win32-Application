@@ -1,0 +1,7 @@
+# Binaries
+Bin/
+Bin-Int/
+x64/
+
+# Visual Studio Specific
+.vs/
