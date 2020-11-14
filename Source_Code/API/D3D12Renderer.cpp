@@ -253,7 +253,7 @@ namespace API
 		// Create the render target for the window. Depnding on the platform, compile in the correct creation method.
 		HRESULT hr = S_OK;
 		Microsoft::WRL::ComPtr<IDXGISwapChain1> TempSwapChain; // Swapchain creation needs DXGISwapChain1 base class. So make a temporary one.
-#if defined (WINDOWS)
+#if defined (PLATFORM_WIN32)
 		// Win32 applications use HWND objects to describe the window.
 		hr = m_pDXGIFactory->CreateSwapChainForHwnd(
 			m_pCommandQueue.Get(),
@@ -268,7 +268,7 @@ namespace API
 		hr = m_pDXGIFactory->MakeWindowAssociation(*(reinterpret_cast<HWND*>(m_pWindow->GetNativeWindow())), DXGI_MWA_NO_ALT_ENTER);
 		ThrowIfFailed(hr);
 
-#elif defined (UWP)
+#elif defined (PLATFORM_UWP)
 		// Windows Store apps use Code Window objects to describe the window.
 		hr = m_pDXGIFactory->CreateSwapChainForCoreWindow(
 			m_pCommandQueue.Get(),
