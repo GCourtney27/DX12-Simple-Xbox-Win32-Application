@@ -1,5 +1,5 @@
 # Simple Xbox Win32 DX12 Application
-A simple cross platform Direct3D 12 application that runs on Xbox One, Win32 desktops and as a Windows Store app. You can run as a Xbox application, a standalone UWP app, or standalone Win32 app.
+A simple cross platform Direct3D 12 application that runs on Xbox One, Win32 desktops and as a Windows Store app. You can run as a Xbox application, a standalone UWP app, or standalone Win32 app. C++/CX and C++/WinRT frameworks are supported and are domonstrated using their respective projects in the applicaions folder inside Visual Studio.
 
 ## Platforms
 Windows (Win32 mode) <br/>
