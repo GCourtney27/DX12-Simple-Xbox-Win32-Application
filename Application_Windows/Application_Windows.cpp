@@ -3,7 +3,7 @@
 
 #include "framework.h"
 #include "Application_Windows.h"
-#include "API/D3D12Renderer.h"
+#include "D3D12Renderer.h"
 
 class Win32Window : public API::Window
 {
@@ -20,10 +20,13 @@ private:
 #define MAX_LOADSTRING 100
 
 // Global Variables:
-HINSTANCE hInst;                                // current instance
+HINSTANCE hInst;                                // Current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-HWND g_HWND;
+WCHAR szWindowClass[MAX_LOADSTRING];            // The main window class name
+HWND g_HWND;                                    // Handle to our main window
+
+API::Window* g_pWindow;
+API::D3D12Renderer* g_pRenderer;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -39,7 +42,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -52,14 +54,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    API::Window* pWindow = new Win32Window(API::Window::WindowProps{ 800, 600 }, &g_HWND);
-    API::D3D12Renderer Renderer(pWindow);
+    g_pWindow = new Win32Window(API::Window::WindowProps{ 800, 600 }, &g_HWND);
+    g_pRenderer = new API::D3D12Renderer(g_pWindow);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_APPLICATIONWINDOWS));
 
-    MSG msg;
-
     // Main message loop:
+    MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -67,10 +68,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+        g_pRenderer->RenderFrame();
 
-        Renderer.RenderFrame();
     }
-    delete pWindow;
+    delete g_pWindow;
+    delete g_pRenderer;
 
     return (int) msg.wParam;
 }
@@ -166,8 +168,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
+
             EndPaint(hWnd, &ps);
+        }
+        break;
+    case WM_SIZE:
+        {
+            static bool IsFirstLaunch = true;
+            if (IsFirstLaunch)
+            {
+                IsFirstLaunch = false;
+                break;
+            }
+            RECT clientRect = {};
+            GetClientRect(hWnd, &clientRect);
+
+            g_pWindow->OnResize(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+            g_pWindow->SetIsMinimized(wParam == SIZE_MINIMIZED);
+            g_pRenderer->OnWindowResize();
         }
         break;
     case WM_DESTROY:

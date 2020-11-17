@@ -14,9 +14,9 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)API\d3dx12.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)API\D3D12Renderer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)API\Window.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)API\Include\d3dx12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)API\Include\D3D12Renderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)API\Include\Window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)API\D3D12Renderer.cpp" />

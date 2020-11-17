@@ -73,7 +73,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\Source_Code\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\Source_Code\API\Include\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Bin\$(Configuration)-$(Platform)\$(ProjectName)\</OutDir>
     <IntDir>$(SolutionDir)\Bin-Int\$(Configuration)-$(Platform)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -85,7 +85,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\Source_Code\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\Source_Code\API\Include\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Bin\$(Configuration)-$(Platform)\$(ProjectName)\</OutDir>
     <IntDir>$(SolutionDir)\Bin-Int\$(Configuration)-$(Platform)\$(ProjectName)\</IntDir>
   </PropertyGroup>

@@ -1,6 +1,6 @@
-#include "D3D12Renderer.h"
+#include "API/Include/D3D12Renderer.h"
 
-#include "d3dx12.h" // DX12 helpers
+#include "API/Include/d3dx12.h" // DX12 helpers
 #include <dxgi1_2.h>
 #include <stdexcept>
 #if defined (_DEBUG)
@@ -21,7 +21,8 @@ namespace API
 		:
 		m_pWindow(pWindow),
 		m_FrameIndex(0),
-		m_ForceUseWarpAdapter(false)
+		m_ForceUseWarpAdapter(false),
+		m_WindowResizeComplete(true)
 	{
 		CreateDevice();
 		CreateSwapChain();
@@ -42,35 +43,47 @@ namespace API
 
 	void D3D12Renderer::RenderFrame()
 	{
-		HRESULT hr = m_pCommandAllocators[m_FrameIndex]->Reset();
-		ThrowIfFailed(hr);
+		if (m_pWindow->GetIsMinimized() || !m_WindowResizeComplete) return;
 
-		hr = m_pCommandList->Reset(m_pCommandAllocators[m_FrameIndex].Get(), nullptr);
-		ThrowIfFailed(hr);
+		ThrowIfFailed(m_pCommandAllocators[m_FrameIndex]->Reset());
+		ThrowIfFailed(m_pCommandList->Reset(m_pCommandAllocators[m_FrameIndex].Get(), nullptr));
 
-		m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pRenderTargets[m_FrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		
+		ID3D12Resource* TransitionResources[] = { m_pSwapChainRenderTargets[m_FrameIndex].Get() };
+		ResourceBarrier(m_pCommandList.Get(), _countof(TransitionResources), TransitionResources, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
 		m_pCommandList->OMSetRenderTargets(1, &GetNextSwapChainRTVHandle(), FALSE, nullptr);
-		const float clearColor[] = { 0.1f, 0.1f, 0.3f, 1.0f };
-		m_pCommandList->ClearRenderTargetView(GetNextSwapChainRTVHandle(), clearColor, 0, nullptr);
+		const float ClearColor[] = { 0.1f, 0.1f, 0.3f, 1.0f };
+		m_pCommandList->ClearRenderTargetView(GetNextSwapChainRTVHandle(), ClearColor, 0, nullptr);
 		m_pCommandList->RSSetViewports(1, &m_ClientViewPort);
 		m_pCommandList->RSSetScissorRects(1, &m_ClientScissorRect);
 
-		ID3D12Resource* TransitionResources[] = { m_pRenderTargets[m_FrameIndex].Get() };
-		ResourceBarrier(m_pCommandList.Get(), 1, TransitionResources, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		//m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pRenderTargets[m_FrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+		ResourceBarrier(m_pCommandList.Get(), _countof(TransitionResources), TransitionResources, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-		hr = m_pCommandList->Close();
-		ThrowIfFailed(hr);
+		ThrowIfFailed(m_pCommandList->Close());
 		ID3D12CommandList* ppCommandLists[] = { m_pCommandList.Get() };
 		m_pCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 		WaitForGPU();
 
-		hr = m_pSwapChain->Present(0, 0);
-		ThrowIfFailed(hr);
+		ThrowIfFailed(m_pSwapChain->Present(0, 0));
 
 		MoveToNextFrame();
+	}
+
+	void D3D12Renderer::OnWindowResize()
+	{
+		if (!m_pWindow->GetIsMinimized())
+		{
+			if (m_WindowResizeComplete)
+			{
+				m_WindowResizeComplete = false;
+				WaitForGPU();
+
+				UpdateSizeDependentResources();
+				m_FrameIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+			}
+		}
+		m_WindowResizeComplete = true;
 	}
 
 	void D3D12Renderer::WaitForGPU()
@@ -156,6 +169,7 @@ namespace API
 		rtvHeapDesc.NumDescriptors = FRAME_BUFFER_COUNT;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		m_pRTVHeap.Reset();
 		ThrowIfFailed(m_pDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_pRTVHeap)));
 		m_pRTVHeap->SetName(L"Render Target View Heap");
 		m_rtvDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -165,8 +179,8 @@ namespace API
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pRTVHeap->GetCPUDescriptorHandleForHeapStart());
 		for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
 		{
-			ThrowIfFailed(m_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&m_pRenderTargets[i])));
-			m_pDevice->CreateRenderTargetView(m_pRenderTargets[i].Get(), nullptr, rtvHandle);
+			ThrowIfFailed(m_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&m_pSwapChainRenderTargets[i])));
+			m_pDevice->CreateRenderTargetView(m_pSwapChainRenderTargets[i].Get(), nullptr, rtvHandle);
 
 			rtvHandle.Offset(m_rtvDescriptorSize);
 		}
@@ -335,8 +349,24 @@ namespace API
 		m_FenceValues[m_FrameIndex] = currentFenceValue + 1;
 	}
 	
-	void D3D12Renderer::InternalShutdown()
+	void D3D12Renderer::UpdateSizeDependentResources()
 	{
+		uint32_t WindowWidth = m_pWindow->GetWidth();
+		uint32_t WindowHeight = m_pWindow->GetHeight();
 
+		// Resize the swapchain
+		{
+			// Destroy the back buffer textures
+			for (uint8_t i = 0; i < FRAME_BUFFER_COUNT; ++i)
+				m_pSwapChainRenderTargets[i].Reset();
+
+			HRESULT hr;
+			DXGI_SWAP_CHAIN_DESC SwapChainDesc = {};
+			m_pSwapChain->GetDesc(&SwapChainDesc);
+			hr = m_pSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, WindowWidth, WindowHeight, SwapChainDesc.BufferDesc.Format, SwapChainDesc.Flags);
+			ThrowIfFailed(hr);
+		}
+		
+		CreateResources();
 	}
 }
