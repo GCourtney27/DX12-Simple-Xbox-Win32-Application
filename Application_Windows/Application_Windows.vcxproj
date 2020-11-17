@@ -175,11 +175,6 @@
     <Image Include="Application_Windows.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Build_Windows\Build_Windows.vcxproj">
-      <Project>{a67b80e6-9b7c-4803-9d85-20140ba3b09a}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
