@@ -3,7 +3,7 @@
 
 #include "framework.h"
 #include "Application_Windows.h"
-#include "D3D12Renderer.h"
+#include "API/Core/D3D12Renderer.h"
 
 class Win32Window : public API::Window
 {
@@ -54,7 +54,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    g_pWindow = new Win32Window(API::Window::WindowProps{ 800, 600 }, &g_HWND);
+    RECT clientRect = { 0 };
+    GetClientRect(g_HWND, &clientRect);
+    g_pWindow = new Win32Window(API::Window::WindowProps{ clientRect.right - clientRect.left, clientRect.bottom - clientRect.top }, &g_HWND);
     g_pRenderer = new API::D3D12Renderer(g_pWindow);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_APPLICATIONWINDOWS));
@@ -172,15 +174,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+    //case WM_EXITSIZEMOVE:
     case WM_SIZE:
         {
             static bool IsFirstLaunch = true;
             if (IsFirstLaunch)
             {
                 IsFirstLaunch = false;
-                break;
+                return DefWindowProc(hWnd, message, wParam, lParam);
             }
-            RECT clientRect = {};
+            RECT clientRect = { 0 };
             GetClientRect(hWnd, &clientRect);
 
             g_pWindow->OnResize(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);

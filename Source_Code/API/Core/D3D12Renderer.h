@@ -6,29 +6,67 @@
 	Author: Garrett Courtney
 
 	Description:
-	A basic renderer that used the DirectX 12 API.
+	A basic renderer utilizing the DirectX 12 API.
 	
 */
 #pragma once
 
 #include "Window.h"
 
+// Standard C Library
+#include <stdexcept>
+#if defined (_DEBUG)
+#include <cassert>
+#endif
+
+// DirectX API
+#include "ThirdParty/d3dx12.h" // DX12 helpers
+#include <dxgi1_2.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <wrl/client.h> // For ComPtr
+#include <DirectXMath.h>
 
 namespace API
 {
+	struct ScreenSpaceVertex
+	{
+		DirectX::XMFLOAT3 Position;
+		DirectX::XMFLOAT4 Color;
+	};
+	struct DrawArgs
+	{
+		UINT NumVerticies;
+	};
+
+	class Model
+	{
+	public:
+		Model() {}
+		~Model() {}
+
+		void Create(ID3D12Device* pDevice);
+		void Destroy();
+		void Render(ID3D12GraphicsCommandList* pCommandList);
+
+	protected:
+		bool LoadResources();
+
+		::Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
+		D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
+		DrawArgs m_DrawArgs;
+	};
+
 	class D3D12Renderer
 	{
 	public:
 		D3D12Renderer(Window* pWindow);
 		~D3D12Renderer();
 
-
+		// Render a frame to the provided window.
 		void RenderFrame();
+		// Resize the back buffer to the provided window dimensions.
 		void OnWindowResize();
-
 		// Override the renderer and force the use of the less effiecient WARP adapter. Should be done at compile time.
 		inline constexpr void SetForceUseWARPAdapter(bool ShouldUse) { m_ForceUseWarpAdapter = ShouldUse; }
 
@@ -43,6 +81,8 @@ namespace API
 		void CreateSyncObjects();
 		// Create the graphics memory for the commands to execute.
 		void CreateCommandAllocators();
+		// Load Assets the application will need.
+		void LoadAssets();
 
 		// Helpers
 		// Get the next available swapchain render target 
@@ -68,12 +108,14 @@ namespace API
 
 		UINT m_FrameIndex;
 		bool m_ForceUseWarpAdapter;
-		static const unsigned int FRAME_BUFFER_COUNT = 3;
+		static const UINT c_FrameBufferCount = 3;
 		bool m_WindowResizeComplete;
+
+		Model m_Model;
 
 		// Sync objects.
 		::Microsoft::WRL::ComPtr<ID3D12Fence> m_pFence;
-		UINT64 m_FenceValues[FRAME_BUFFER_COUNT];
+		UINT64 m_FenceValues[c_FrameBufferCount];
 		HANDLE m_FenceEvent;
 
 		// Rasterizer resources.
@@ -84,17 +126,20 @@ namespace API
 		::Microsoft::WRL::ComPtr<ID3D12Device> m_pDevice;
 		::Microsoft::WRL::ComPtr<IDXGIFactory4> m_pDXGIFactory;
 
-		// Command exeution values.
-		::Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pCommandAllocators[FRAME_BUFFER_COUNT];
+		// Command execution values.
+		::Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pCommandAllocators[c_FrameBufferCount];
 		::Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommandList;
 		::Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_pCommandQueue;
 
 		// SwapChain resoures.
 		::Microsoft::WRL::ComPtr<IDXGISwapChain3> m_pSwapChain;
-		::Microsoft::WRL::ComPtr<ID3D12Resource> m_pSwapChainRenderTargets[FRAME_BUFFER_COUNT];
+		::Microsoft::WRL::ComPtr<ID3D12Resource> m_pSwapChainRenderTargets[c_FrameBufferCount];
 		::Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pRTVHeap;
 		UINT m_rtvDescriptorSize;
 
+		// Application
+		::Microsoft::WRL::ComPtr<ID3D12RootSignature> m_pRootSignature;
+		::Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pPipelineState;
 
 	};
 }

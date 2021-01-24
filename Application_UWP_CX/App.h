@@ -4,6 +4,26 @@
 #include "Common\DeviceResources.h"
 #include "Application_UWP_CXMain.h"
 
+#include "API/Core/D3D12Renderer.h"
+
+class UWPWindow : public API::Window
+{
+public:
+	UWPWindow(const WindowProps& Props, Windows::UI::Core::CoreWindow^ Window)
+		: Window(Props), m_Window(Window)
+	{
+		//m_Window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+	}
+
+	inline virtual void* GetNativeWindow() override
+	{
+		return (void*)m_Window.Get();
+	}
+
+private:
+	Platform::Agile<Windows::UI::Core::CoreWindow> m_Window;
+};
+
 namespace Application_UWP_CX
 {
 	// Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
@@ -36,11 +56,9 @@ namespace Application_UWP_CX
 		void OnDisplayContentsInvalidated(Windows::Graphics::Display::DisplayInformation^ sender, Platform::Object^ args);
 
 	private:
-		// Private accessor for m_deviceResources, protects against device removed errors.
-		std::shared_ptr<DX::DeviceResources> GetDeviceResources();
+		API::D3D12Renderer* m_pRenderer;
+		UWPWindow* m_pWindow;
 
-		std::shared_ptr<DX::DeviceResources> m_deviceResources;
-		std::unique_ptr<Application_UWP_CXMain> m_main;
 		bool m_windowClosed;
 		bool m_windowVisible;
 	};

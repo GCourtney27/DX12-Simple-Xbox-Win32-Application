@@ -42,6 +42,8 @@ namespace API
 		void OnResize(int Width, int Height) { m_Props.Width = Width; m_Props.Height = Height; }
 		void SetIsMinimized(bool Minimized) { m_Minimized = Minimized; }
 		bool GetIsMinimized() const { return m_Minimized; }
+		bool GetIsSizing() const { return m_IsSizing; }
+		void SetIsSizing(bool Sizing) { m_IsSizing = Sizing; }
 	protected:
 		Window(const WindowProps& Props)
 			: m_Props(Props) {}
@@ -49,5 +51,6 @@ namespace API
 	protected:
 		WindowProps m_Props;
 		bool m_Minimized = false;
+		bool m_IsSizing = false;
 	};
 }
